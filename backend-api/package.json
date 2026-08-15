@@ -1,0 +1,10 @@
+{
+  "name": "backend-api",
+  "version": "1.0.0",
+  "main": "src/app.js",
+  "scripts": { "start": "node src/app.js" },
+  "dependencies": {
+    "express": "^4.19.2",
+    "pg": "^8.11.5"
+  }
+}

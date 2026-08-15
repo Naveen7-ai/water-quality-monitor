@@ -1,0 +1,89 @@
+version: "3.9"
+
+services:
+  postgres-db:
+    image: postgres:16-alpine
+    container_name: wqm-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: water_quality
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - wqm-network
+
+  mqtt-broker:
+    image: eclipse-mosquitto:2
+    container_name: wqm-mqtt
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    command: mosquitto -c /mosquitto-no-auth.conf
+    networks:
+      - wqm-network
+
+  backend-api:
+    build: ./backend-api
+    container_name: wqm-api
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      - DB_HOST=postgres-db
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - postgres-db
+    networks:
+      - wqm-network
+
+  sensor-ingestion:
+    build: ./sensor-ingestion
+    container_name: wqm-ingestion
+    restart: unless-stopped
+    environment:
+      - MQTT_BROKER_URL=mqtt://mqtt-broker:1883
+      - DB_HOST=postgres-db
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - mqtt-broker
+      - postgres-db
+    networks:
+      - wqm-network
+
+  alert-service:
+    build: ./alert-service
+    container_name: wqm-alerts
+    restart: unless-stopped
+    environment:
+      - DB_HOST=postgres-db
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - postgres-db
+    networks:
+      - wqm-network
+
+  frontend-dashboard:
+    build: ./frontend-dashboard
+    container_name: wqm-dashboard
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend-api
+    networks:
+      - wqm-network
+
+volumes:
+  db-data:
+
+networks:
+  wqm-network:
+    driver: bridge

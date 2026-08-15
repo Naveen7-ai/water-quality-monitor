@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Water Quality Monitoring Dashboard</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f4f7f9; margin: 0; padding: 24px; }
+  h1 { color: #1f5c8b; }
+  .panel { background: white; border-radius: 8px; padding: 16px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; font-size: 14px; }
+  th { background: #1f5c8b; color: white; }
+  .alert-row { background: #fdecea; }
+  #status { font-size: 13px; color: #666; }
+</style>
+</head>
+<body>
+  <h1>Water Quality Monitoring Dashboard</h1>
+  <p id="status">Connecting to API...</p>
+
+  <div class="panel">
+    <h2>Recent Alerts</h2>
+    <table>
+      <thead><tr><th>Source</th><th>Reason</th><th>Severity</th><th>Time</th></tr></thead>
+      <tbody id="alerts-body"></tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h2>Recent Readings</h2>
+    <table>
+      <thead><tr><th>Source</th><th>pH</th><th>Turbidity</th><th>TDS</th><th>Chlorine</th><th>Temp</th><th>Time</th></tr></thead>
+      <tbody id="readings-body"></tbody>
+    </table>
+  </div>
+
+<script>
+  const API_BASE = "http://localhost:4000";
+
+  async function refresh() {
+    try {
+      const [readingsRes, alertsRes] = await Promise.all([
+        fetch(`${API_BASE}/readings`),
+        fetch(`${API_BASE}/alerts`)
+      ]);
+      const readings = await readingsRes.json();
+      const alerts = await alertsRes.json();
+
+      document.getElementById("status").textContent =
+        `Connected. Last refreshed: ${new Date().toLocaleTimeString()}`;
+
+      document.getElementById("readings-body").innerHTML = readings.map(r => `
+        <tr>
+          <td>${r.source_id}</td><td>${r.ph ?? "-"}</td><td>${r.turbidity ?? "-"}</td>
+          <td>${r.tds ?? "-"}</td><td>${r.chlorine ?? "-"}</td><td>${r.temperature ?? "-"}</td>
+          <td>${new Date(r.recorded_at).toLocaleString()}</td>
+        </tr>`).join("");
+
+      document.getElementById("alerts-body").innerHTML = alerts.map(a => `
+        <tr class="alert-row">
+          <td>${a.source_id}</td><td>${a.reason}</td><td>${a.severity}</td>
+          <td>${new Date(a.created_at).toLocaleString()}</td>
+        </tr>`).join("");
+    } catch (err) {
+      document.getElementById("status").textContent = "Could not reach API at " + API_BASE;
+    }
+  }
+
+  refresh();
+  setInterval(refresh, 5000);
+</script>
+</body>
+</html>
