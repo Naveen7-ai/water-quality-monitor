@@ -11,7 +11,7 @@ const pool = new Pool({
 // Safe thresholds (simplified WHO/BIS style ranges)
 const THRESHOLDS = {
   ph: { min: 6.5, max: 8.5 },
-  turbidity: { max: 5 },
+  turbidity: { max: 4 },
   chlorine: { min: 0.2 },
 };
 
